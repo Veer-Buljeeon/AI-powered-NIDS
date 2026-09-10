@@ -1,0 +1,7 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Raw CICIDS2017 dataset — large (~884 MB), placed manually per the project brief
+data/raw/

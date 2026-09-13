@@ -14,7 +14,8 @@ model-ready train/test arrays following the project brief's 11-step pipeline:
   8.  Fit MinMaxScaler on the training set only; transform both sets.
   9.  Encode labels with LabelEncoder.
   10. Persist scaler.pkl, selected_features.json and label_map.json to core/models/.
-  11. Apply SMOTE (k_neighbors=5) to the TRAINING set only.
+  11. Balance the TRAINING set only: undersample over-represented classes and
+      SMOTE (k_neighbors=5) under-represented ones to a shared per-class target.
 
 The artifacts written to core/models/ are consumed later by the detection
 engine, so the feature order and the label mapping are persisted exactly as
@@ -32,6 +33,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import train_test_split
@@ -48,6 +51,15 @@ DEFAULT_MODELS_DIR = _CORE_DIR / "models"
 LABEL_COLUMN = "Label"
 
 
+def _format_counts(counter, label_encoder) -> str:
+    """Render an integer-label Counter as 'class_name  count' lines, ordered by name."""
+    rows = sorted(
+        ((label_encoder.inverse_transform([idx])[0], n) for idx, n in counter.items()),
+        key=lambda kv: kv[0],
+    )
+    return "\n".join(f"    {name:<32} {n}" for name, n in rows)
+
+
 def load_and_preprocess(
     raw_dir: str | Path = DEFAULT_RAW_DIR,
     models_dir: str | Path = DEFAULT_MODELS_DIR,
@@ -57,16 +69,20 @@ def load_and_preprocess(
     variance_threshold: float = 0.01,
     correlation_threshold: float = 0.95,
     smote_k_neighbors: int = 5,
+    sampling_target: int = 200_000,
 ):
     """Run the full preprocessing pipeline and return model-ready arrays.
 
     Parameters mirror the project brief; defaults are the documented values.
+    ``sampling_target`` is the per-class row count used to balance the training
+    set: majority classes are undersampled down to it and minority classes are
+    SMOTE'd up to it (see step 11).
 
     Returns
     -------
-    X_train_balanced : np.ndarray   scaled, top-N features, SMOTE-balanced
+    X_train_balanced : np.ndarray   scaled, top-N features, class-balanced
     y_train_balanced : np.ndarray   integer-encoded labels (balanced)
-    X_test           : np.ndarray   scaled, top-N features (NO SMOTE applied)
+    X_test           : np.ndarray   scaled, top-N features (NOT resampled)
     y_test           : np.ndarray   integer-encoded labels
     """
     raw_dir = Path(raw_dir)
@@ -86,8 +102,8 @@ def load_and_preprocess(
     frames = []
     for path in csv_paths:
         # latin-1 never fails to decode; the CICIDS2017 web-attack labels
-        # contain a non-UTF-8 byte (0x96) that would otherwise raise
-        # UnicodeDecodeError under the default utf-8 codec.
+        # contain a non-UTF-8 byte that would otherwise raise UnicodeDecodeError
+        # under the default utf-8 codec.
         part = pd.read_csv(path, encoding="latin-1", low_memory=False)
         part.columns = part.columns.str.strip()
         logger.info("Loaded %-55s rows=%8d cols=%d", path.name, len(part), part.shape[1])
@@ -223,19 +239,41 @@ def load_and_preprocess(
     logger.info("Wrote %s  (%d classes)", label_map_path, len(label_map))
 
     # ------------------------------------------------------------------ #
-    # Step 11 - SMOTE on the TRAINING set only
+    # Step 11 - Balance the TRAINING set only (hybrid resampling)
     # ------------------------------------------------------------------ #
-    dist_before = dict(sorted(Counter(y_train).items()))
-    logger.info("Class distribution BEFORE SMOTE (train):\n%s",
-                "\n".join(f"    {k:<32} {v}" for k, v in dist_before.items()))
+    # The training split is extremely skewed (BENIGN ~1.7M vs Heartbleed = 8).
+    # Balancing every class up to the majority with plain SMOTE would produce
+    # ~25M rows and synthesise ~1.7M samples from a handful of real ones. Instead
+    # we target a shared per-class count (`sampling_target`):
+    #   * RandomUnderSampler brings over-represented classes DOWN to the target;
+    #   * SMOTE (k_neighbors=5) brings under-represented classes UP to the target.
+    # Applied to the training set ONLY - the test set keeps its natural imbalance.
+    class_counts = Counter(y_train_enc)
+    logger.info("Class distribution BEFORE resampling (train):\n%s",
+                _format_counts(class_counts, label_encoder))
 
-    smote = SMOTE(random_state=random_state, k_neighbors=smote_k_neighbors)
-    X_train_balanced, y_train_balanced = smote.fit_resample(X_train_scaled, y_train_enc)
+    under_strategy = {c: sampling_target for c, n in class_counts.items() if n > sampling_target}
+    over_strategy = {c: sampling_target for c, n in class_counts.items() if n < sampling_target}
+    logger.info(
+        "Resampling target = %d/class  |  undersampling %d class(es), SMOTE on %d class(es)",
+        sampling_target, len(under_strategy), len(over_strategy),
+    )
 
-    dist_after = dict(sorted(Counter(label_encoder.inverse_transform(y_train_balanced)).items()))
-    logger.info("Class distribution AFTER SMOTE (train):\n%s",
-                "\n".join(f"    {k:<32} {v}" for k, v in dist_after.items()))
-    logger.info("Training rows: %d -> %d after SMOTE", len(y_train_enc), len(y_train_balanced))
+    steps = []
+    if under_strategy:
+        steps.append(("undersample", RandomUnderSampler(
+            sampling_strategy=under_strategy, random_state=random_state)))
+    if over_strategy:
+        steps.append(("smote", SMOTE(
+            sampling_strategy=over_strategy, random_state=random_state,
+            k_neighbors=smote_k_neighbors)))
+    resampler = ImbPipeline(steps=steps)
+    X_train_balanced, y_train_balanced = resampler.fit_resample(X_train_scaled, y_train_enc)
+
+    logger.info("Class distribution AFTER resampling (train):\n%s",
+                _format_counts(Counter(y_train_balanced), label_encoder))
+    logger.info("Training rows: %d -> %d after resampling",
+                len(y_train_enc), len(y_train_balanced))
 
     return X_train_balanced, y_train_balanced, X_test_scaled, y_test_enc
 

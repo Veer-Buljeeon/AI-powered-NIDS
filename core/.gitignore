@@ -5,3 +5,10 @@ __pycache__/
 
 # Raw CICIDS2017 dataset — large (~884 MB), placed manually per the project brief
 data/raw/
+
+# Phase 2 trained model artifacts (large; regenerate via core/training/)
+models/random_forest_model.pkl
+models/xgboost_model.pkl
+models/lstm_model/
+# Cached preprocessed arrays (regenerated from the pipeline)
+models/preprocessed/

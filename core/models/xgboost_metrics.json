@@ -1,0 +1,8 @@
+{
+  "model": "xgboost",
+  "accuracy": 0.9981795524273341,
+  "precision_weighted": 0.9984222801591801,
+  "recall_weighted": 0.9981795524273341,
+  "f1_weighted": 0.9982605374276547,
+  "roc_auc_ovr_weighted": 0.9999375642668634
+}

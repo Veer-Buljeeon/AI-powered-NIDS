@@ -1,0 +1,8 @@
+{
+  "model": "random_forest",
+  "accuracy": 0.9957551179754699,
+  "precision_weighted": 0.9969878220604033,
+  "recall_weighted": 0.9957551179754699,
+  "f1_weighted": 0.9962170110185344,
+  "roc_auc_ovr_weighted": 0.9998867727546962
+}

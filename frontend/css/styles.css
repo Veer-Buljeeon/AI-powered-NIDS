@@ -1,0 +1,59 @@
+:root{
+  --bg:#0f141b; --panel:#161d27; --panel2:#1c2530; --line:#26313f;
+  --text:#e6edf3; --muted:#8b97a7; --accent:#3b82f6;
+  --red:#DC2626; --red-dark:#843C0C;
+  --amber:#D97706; --amber-dark:#7B5E00;
+  --green:#16A34A; --green-dark:#217346;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5}
+
+/* Zone 1 - header status */
+header{padding:18px 28px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+h1{font-size:18px;margin:0;font-weight:600}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:12px;margin-top:2px}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);display:flex;align-items:center;gap:6px}
+.pill::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.ok{color:#a7f3d0;border-color:#14532d}.pill.ok::before{background:var(--green)}
+.pill.bad{color:#fecaca;border-color:#7f1d1d}.pill.bad::before{background:var(--red)}
+
+main{padding:22px 28px;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+/* Zone 2 - stats summary */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.card .value{font-size:30px;font-weight:600;margin-top:6px}
+.card .value.small{font-size:18px;padding-top:8px}
+.card.high .value{color:var(--red)}
+.card.medium .value{color:var(--amber)}
+.card.benign .value{color:var(--green)}
+
+/* Zone 3 - charts */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.panel h2{font-size:14px;margin:0 0 14px;font-weight:600}
+.chart-wrap{position:relative;height:240px}
+.chart-wrap.tall{height:340px}
+
+/* Zone 4 - live alert feed + history */
+.feed{display:flex;flex-direction:column;gap:2px;max-height:360px;overflow-y:auto}
+.feed-row{display:grid;grid-template-columns:18px 72px 1fr 170px 64px 92px;align-items:center;
+  gap:10px;padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px}
+.feed-row:last-child{border-bottom:0}
+.sev-dot{font-size:12px;line-height:1}
+.feed-sev{font-size:11px;color:var(--muted);text-transform:uppercase}
+.feed-src{color:var(--muted);font-family:Consolas,monospace;font-size:12px}
+.feed-conf,.feed-time{color:var(--muted);font-size:12px}
+.empty{color:var(--muted);text-align:center;padding:18px}
+
+table.history{width:100%;border-collapse:collapse;font-size:13px}
+table.history th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;
+  text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.history td{padding:8px 10px;border-bottom:1px solid var(--line)}
+table.history tr:last-child td{border-bottom:0}

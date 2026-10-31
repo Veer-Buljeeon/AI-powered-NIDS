@@ -1,16 +1,24 @@
 # AI-powered-NIDS — Python dependencies (core/)
 #
-# Scoped to the current build phase, per the project brief's "one phase at a
-# time / don't skip ahead" rule. Later phases append their own libraries:
-#   Phase 2 (model training):   xgboost, tensorflow
-#   Phase 3 (detection engine): flask, gunicorn
+# Grown per build phase, per the project brief's "one phase at a time" rule.
+#   Phase 2 (model training) adds xgboost, tensorflow, matplotlib
+#   Phase 3 (detection engine) adds flask  [current]
 #
 # numpy is pinned < 2.0 deliberately: TensorFlow (added in Phase 2) is not yet
 # compatible with the numpy 2.x ABI, so pinning now avoids a later reinstall.
 
+# Phase 1 - preprocessing
 numpy==1.26.4
 pandas==2.2.2
 scikit-learn==1.4.2
 imbalanced-learn==0.12.3
 scipy==1.13.1
 joblib==1.4.2
+
+# Phase 2 - model training
+xgboost==2.1.1
+tensorflow==2.15.1
+matplotlib==3.9.2
+
+# Phase 3 - detection engine
+flask==3.0.3
